@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 
 namespace UParse
 {
@@ -8,6 +9,13 @@ namespace UParse
     {
         private static readonly Dictionary<Type, List<ConversionObjectInfo>> typeDefinitions =
             new Dictionary<Type, List<ConversionObjectInfo>>();
+
+        private static readonly Dictionary<Type, ConversionObjectInfo> conversionInformation = 
+            new Dictionary<Type, ConversionObjectInfo>();
+
+        private static readonly Dictionary<Type, ConversionObjectNode> conversionNodes =
+            new Dictionary<Type, ConversionObjectNode>();
+
 
         internal static List<ConversionObjectInfo> GetTypeDefinition(Type type)
         {

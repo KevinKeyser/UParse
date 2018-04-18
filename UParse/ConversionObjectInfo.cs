@@ -5,15 +5,15 @@ namespace UParse
 {
     public class ConversionObjectInfo
     {
+        public Type UnderlyingType { get; }
+
+        public MemberInfo MemberInfo { get; }
+
         public ConversionObjectInfo(MemberInfo memberInfo)
         {
             MemberInfo = memberInfo;
             UnderlyingType = memberInfo.GetUnderlyingType();
         }
-
-        public Type UnderlyingType { get; }
-
-        public MemberInfo MemberInfo { get; }
 
         public void SetValue(object obj, object value)
         {

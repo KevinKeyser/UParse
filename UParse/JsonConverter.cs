@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -136,7 +137,7 @@ namespace UParse
             return null;
         }
         
-        private Array GetArray(JSONArray jsonArray, Type type)
+        private IEnumerable GetArray(JSONArray jsonArray, Type type)
         {
             Array array = Array.CreateInstance(type, jsonArray.Count);
             for (var i = 0; i < jsonArray.Count; i++)
