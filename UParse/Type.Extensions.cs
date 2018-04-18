@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,6 +7,63 @@ namespace UParse
 {
     public static class TypeExtensions
     {
+        public static Type GetEnumerableType(this Type type)
+        {
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
+
+            if (type.HasElementType)
+            {
+                return type.GetElementType();
+            }
+
+            if (type.IsAssignableToGenericType(typeof(IEnumerable<>)))
+            {
+                return type.GetGenericArguments()[0];
+            }
+
+            if (typeof(IEnumerable).IsAssignableFrom(type))
+            {
+                return typeof(object);
+            }
+
+            return null;
+        }
+        
+        public static bool IsAssignableToGenericType(this Type type, Type genericType)
+        {
+            var interfaceTypes = type.GetInterfaces();
+
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == genericType)
+                return true;
+            
+            foreach (var it in interfaceTypes)
+            {
+                if (it.IsGenericType && it.GetGenericTypeDefinition() == genericType)
+                    return true;
+            }
+
+            Type baseType = type.BaseType;
+            if (baseType == null) return false;
+
+            return IsAssignableToGenericType(baseType, genericType);
+        }
+        
+        public static bool IsNumber(this Type type)
+        {
+            return type == typeof(sbyte)
+                   || type == typeof(byte)
+                   || type == typeof(short)
+                   || type == typeof(ushort)
+                   || type == typeof(int)
+                   || type == typeof(uint)
+                   || type == typeof(long)
+                   || type == typeof(ulong)
+                   || type == typeof(float)
+                   || type == typeof(double)
+                   || type == typeof(decimal);
+        }
+        
     #region https://stackoverflow.com/questions/14107683/how-to-find-the-smallest-assignable-type-in-two-types-duplicate
 
         /// <summary>

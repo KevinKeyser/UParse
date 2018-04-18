@@ -31,94 +31,12 @@ namespace UParse
                     continue;
                 }
 
-                var value = GetValue(jsonnode);
+                var value = GetValue(jsonnode, definition.UnderlyingType);
 
                 definition.SetValue(obj, value);
             }
 
             return obj;
-        }
-
-
-        private Type GetArrayType(JSONArray jsonArray)
-        {
-            Type type = null;
-            if (jsonArray.Count > 0)
-            {
-                type = GetValue(jsonArray[0]).GetType();
-            }
-
-            for (var i = 1; i < jsonArray.Count; i++)
-            {
-                type = type.FindAssignableWith(GetValue(jsonArray[i]).GetType());
-            }
-
-            return type;
-        }
-
-        private IEnumerable GetArray(JSONArray jsonArray)
-        {
-            for (var i = 0; i < jsonArray.Count; i++)
-            {
-                yield return GetValue(jsonArray[i]);
-            }
-        }
-
-        private object GetValue(JSONNode node)
-        {
-            var jsonArray = node.AsArray;
-            if (jsonArray != null)
-            {
-                var enumerable = GetArray(jsonArray);
-                var array = Array.CreateInstance(GetArrayType(jsonArray), jsonArray.Count);
-                for (int i = 0; i < array.Length; i++)
-                {
-                    array.SetValue(GetValue(jsonArray[i]), i);
-                }
-
-                return array;
-            }
-
-            if (!node.Value.Contains("."))
-            {
-                bool boolean;
-                if (bool.TryParse(node.Value, out boolean))
-                {
-                    return boolean;
-                }
-
-                short int16;
-                if (short.TryParse(node.Value, out int16))
-                {
-                    return int16;
-                }
-
-                int int32;
-                if (int.TryParse(node.Value, out int32))
-                {
-                    return int32;
-                }
-
-                long int64;
-                if (long.TryParse(node.Value, out int64))
-                {
-                    return int64;
-                }
-            }
-
-            float floatingPoint;
-            if (float.TryParse(node.Value, out floatingPoint))
-            {
-                return floatingPoint;
-            }
-
-            double doublePrecision;
-            if (double.TryParse(node.Value, out doublePrecision))
-            {
-                return doublePrecision;
-            }
-
-            return node.Value;
         }
 
         private string ToJson(object obj)
@@ -165,7 +83,7 @@ namespace UParse
                         stringBuilder.Append($"{propertyInfo.Name}:");
                         if (propertyInfo.GetIndexParameters().Length > 0)
                         {
-                            stringBuilder.Append(ToJson(IndexerToEnumerable(propertyInfo, obj)));
+                            stringBuilder.Append(ToJson(propertyInfo.IndexerToEnumerable(obj)));
                             continue;
                         }
 
@@ -187,24 +105,125 @@ namespace UParse
             return stringBuilder.ToString();
         }
 
-        private IEnumerable IndexerToEnumerable(PropertyInfo propertyInfo, object obj)
+        private object GetValue(JSONNode node, Type type)
         {
-            var count = 0;
-            while (true)
+            if (type == typeof(string) || type == typeof(char))
             {
-                object value;
-                try
+                return node.Value;
+            }
+
+            Type arrayType = type.GetEnumerableType();
+            if (arrayType != null)
+            {
+                return GetArray(node.AsArray, arrayType);
+            }
+
+            if (type.IsNumber())
+            {
+                return Convert.ChangeType(node.Value, type);
+            }
+
+            if (type == typeof(bool))
+            {
+                return Boolean.Parse(node.Value);
+            }
+
+            if (!type.IsPrimitive)
+            {
+                return Deserialize(node.Value, type);
+            }
+
+            return null;
+        }
+        
+        private Array GetArray(JSONArray jsonArray, Type type)
+        {
+            Array array = Array.CreateInstance(type, jsonArray.Count);
+            for (var i = 0; i < jsonArray.Count; i++)
+            {
+                array.SetValue(GetValue(jsonArray[i], type), i);
+            }
+            return array;
+        }
+
+        
+        #region No Schema Parsing
+        private Array GetArrayFromJson(JSONArray jsonArray)
+        {
+            Type type = GetJsonArrayType(jsonArray);
+            return GetArray(jsonArray, type);
+        }
+        
+        private Type GetJsonArrayType(JSONArray jsonArray)
+        {
+            Type type = null;
+            if (jsonArray.Count > 0)
+            {
+                type = GetValueFromJson(jsonArray[0]).GetType();
+            }
+
+            for (var i = 1; i < jsonArray.Count; i++)
+            {
+                type = type.FindAssignableWith(GetValueFromJson(jsonArray[i]).GetType());
+            }
+
+            return type;
+        }
+
+        private object GetValueFromJson(JSONNode node)
+        {
+            var jsonArray = node.AsArray;
+            if (jsonArray != null)
+            {
+                var array = GetArrayFromJson(jsonArray);
+                /*for (int i = 0; i < array.Length; i++)
                 {
-                    value = propertyInfo.GetValue(obj, new object[] {count});
-                    count++;
-                }
-                catch (TargetInvocationException)
+                    array.SetValue(GetValueFromJson(jsonArray[i]), i);
+                }*/
+
+                return array;
+            }
+
+            if (!node.Value.Contains("."))
+            {
+                bool boolean;
+                if (bool.TryParse(node.Value, out boolean))
                 {
-                    break;
+                    return boolean;
                 }
 
-                yield return value;
+                short int16;
+                if (short.TryParse(node.Value, out int16))
+                {
+                    return int16;
+                }
+
+                int int32;
+                if (int.TryParse(node.Value, out int32))
+                {
+                    return int32;
+                }
+
+                long int64;
+                if (long.TryParse(node.Value, out int64))
+                {
+                    return int64;
+                }
             }
+
+            float floatingPoint;
+            if (float.TryParse(node.Value, out floatingPoint))
+            {
+                return floatingPoint;
+            }
+
+            double doublePrecision;
+            if (double.TryParse(node.Value, out doublePrecision))
+            {
+                return doublePrecision;
+            }
+
+            return node.Value;
         }
 
         private JsonType GetJsonType(Type type)
@@ -219,7 +238,7 @@ namespace UParse
                 return JsonType.Array;
             }
 
-            if (IsNumber(type))
+            if (type.IsNumber())
             {
                 return JsonType.Number;
             }
@@ -237,22 +256,6 @@ namespace UParse
             return JsonType.Null;
         }
 
-        private bool IsNumber(Type type)
-        {
-            return type == typeof(sbyte)
-                   || type == typeof(byte)
-                   || type == typeof(short)
-                   || type == typeof(ushort)
-                   || type == typeof(int)
-                   || type == typeof(uint)
-                   || type == typeof(long)
-                   || type == typeof(ulong)
-                   || type == typeof(float)
-                   || type == typeof(double)
-                   || type == typeof(decimal);
-        }
-
-
         private enum JsonType
         {
             Null = 0,
@@ -262,5 +265,6 @@ namespace UParse
             Number = 4,
             Boolean = 5
         }
+        #endregion
     }
 }
