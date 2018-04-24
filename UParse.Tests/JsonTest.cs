@@ -1,3 +1,9 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Net.NetworkInformation;
+using System.Reflection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace UParse.Tests
@@ -18,7 +24,11 @@ namespace UParse.Tests
         {
             var data = new TestData();
             var converter = new JsonConverter();
-            converter.Deserialize(converter.Serialize(data), data.GetType());
+            var json = converter.Serialize(data);
+            Log(json);
+            data = converter.Deserialize(json, data.GetType()) as TestData;
+            json = converter.Serialize(data);
+            Log(json);
         }
     }
 }

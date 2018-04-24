@@ -113,10 +113,10 @@ namespace UParse
                 return node.Value;
             }
 
-            Type arrayType = type.GetEnumerableType();
-            if (arrayType != null)
+            Type enumerableType = type.GetEnumerableType();
+            if (enumerableType != null)
             {
-                return GetArray(node.AsArray, arrayType);
+                return GetArray(node.AsArray, type, enumerableType);
             }
 
             if (type.IsNumber())
@@ -137,22 +137,36 @@ namespace UParse
             return null;
         }
         
-        private IEnumerable GetArray(JSONArray jsonArray, Type type)
+        private IEnumerable GetArray(JSONArray jsonArray, Type arrayType, Type enumerableType)
         {
-            Array array = Array.CreateInstance(type, jsonArray.Count);
+            IList list;
+            if (arrayType.IsArray || arrayType == typeof(Array))
+            {
+                list = Array.CreateInstance(enumerableType, jsonArray.Count);
+            }
+            else
+            {
+                list = Activator.CreateInstance(arrayType) as IList;
+            }
+
             for (var i = 0; i < jsonArray.Count; i++)
             {
-                array.SetValue(GetValue(jsonArray[i], type), i);
+                if (list.IsFixedSize)
+                {
+                    list[i] = GetValue(jsonArray[i], enumerableType);
+                    continue;
+                }
+                list.Add(GetValue(jsonArray[i], enumerableType));
             }
-            return array;
+            return list;
         }
 
         
         #region No Schema Parsing
-        private Array GetArrayFromJson(JSONArray jsonArray)
+        private IEnumerable GetArrayFromJson(JSONArray jsonArray)
         {
             Type type = GetJsonArrayType(jsonArray);
-            return GetArray(jsonArray, type);
+            return GetArray(jsonArray, typeof(Array), type);
         }
         
         private Type GetJsonArrayType(JSONArray jsonArray)
