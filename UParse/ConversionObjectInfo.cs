@@ -7,11 +7,14 @@ namespace UParse
     {
         public Type UnderlyingType { get; }
 
+        public string Name { get; }
+
         public MemberInfo MemberInfo { get; }
 
         public ConversionObjectInfo(MemberInfo memberInfo)
         {
             MemberInfo = memberInfo;
+            Name = memberInfo.Name;
             UnderlyingType = memberInfo.GetUnderlyingType();
         }
 
@@ -37,15 +40,15 @@ namespace UParse
             }
         }
 
-        public void GetValue(object obj)
+        public object GetValue(object obj)
         {
             switch (MemberInfo.MemberType)
             {
                 case MemberTypes.Field:
-                    ((FieldInfo) MemberInfo).GetValue(obj);
+                    return ((FieldInfo) MemberInfo).GetValue(obj);
                     break;
                 case MemberTypes.Property:
-                    ((PropertyInfo) MemberInfo).GetValue(obj);
+                    return ((PropertyInfo) MemberInfo).GetValue(obj);
                     break;
                 case MemberTypes.Event:
                 //return ((EventInfo)MemberInfo).AddEventHandler(obj, value);

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace UParse
@@ -8,78 +10,83 @@ namespace UParse
     {
         public string Serialize(object obj)
         {
-            return ToCsv(obj);
+            string headers = ToCsvHeaders(obj);
+            return headers + Environment.NewLine + ToCsv(obj);
         }
 
         public object Deserialize(string serializedObject, Type type)
         {
             return null;
         }
-        
-        private string ToCsv(object obj)
+
+        public string ToCsvHeaders(object obj, string prefix = "", string suffix = "")
         {
-            var stringBuilder = new StringBuilder();
-            var ConversionObjectType = ConversionObjectTypeExtensions.GetConversionObjectType(obj.GetType());
-            switch (ConversionObjectType)
+            string delimiter = ",";
+            var headers = new List<string>();
+            var conversionObjectType = obj.GetType().GetConversionObjectType();
+            switch (conversionObjectType)
             {
                 case ConversionObjectType.Array:
-                    stringBuilder.Append("[");
                     var array = (IEnumerable) obj;
-                    
-                    var firstArray = true;
+
+                    int count = 0;
                     foreach (var item in array)
                     {
-                        if (!firstArray)
-                        {
-                            stringBuilder.Append(",");
-                        }
-
-                        stringBuilder.Append(ToCsv(item));
-                        firstArray = false;
+                        var itemHeaders = ToCsvHeaders(item, prefix: prefix, suffix: $"[{count++}]");
+                        headers.Add(itemHeaders);
                     }
-
-                    stringBuilder.Append("]");
                     break;
                 case ConversionObjectType.Object:
-                    stringBuilder.Append("{");
-                    var properties = obj.GetType().GetProperties();
-                    var first = true;
-                    foreach (var propertyInfo in properties)
+                    var innerConversionObjects = ConverterSettings.GetTypeDefinition(obj.GetType());
+
+                    string extendedPrefix = String.IsNullOrWhiteSpace(prefix) ? prefix : $"{prefix}.";
+                    foreach (var innerConversionObject in innerConversionObjects)
                     {
-                        if (propertyInfo.SetMethod == null ||
-                            propertyInfo.GetMethod == null)
-                        {
-                            continue;
-                        }
-
-                        if (!first)
-                        {
-                            stringBuilder.Append(",");
-                        }
-
-                        stringBuilder.Append($"{propertyInfo.Name}:");
-                        if (propertyInfo.GetIndexParameters().Length > 0)
-                        {
-                            stringBuilder.Append(ToCsv(propertyInfo.IndexerToEnumerable(obj)));
-                            continue;
-                        }
-
-
-                        stringBuilder.Append(ToCsv(propertyInfo.GetValue(obj)));
-                        first = false;
+                        headers.Add(ToCsvHeaders(innerConversionObject.GetValue(obj),
+                            prefix: $"{extendedPrefix}{innerConversionObject.Name}{suffix}"));
                     }
-
-                    stringBuilder.Append("}");
-                    break;
-                case ConversionObjectType.String:
-                    stringBuilder.Append($"\"{obj}\"");
                     break;
                 default:
-                    stringBuilder.Append(obj);
+                    var header = prefix + suffix;
+                    if (!String.IsNullOrWhiteSpace(header))
+                    {
+                        headers.Add(header);
+                    }
                     break;
             }
 
-            return stringBuilder.ToString();
+            return String.Join(delimiter, headers);
+        }
+        
+        private string ToCsv(object obj)
+        {
+            string delimiter = ",";
+            var values = new List<string>();
+            var conversionObjectType = obj.GetType().GetConversionObjectType();
+            switch (conversionObjectType)
+            {
+                case ConversionObjectType.Array:
+                    var array = (IEnumerable) obj;
+                    
+                    foreach (var item in array)
+                    {
+                        values.Add(ToCsv(item));
+                    }
+                    break;
+                case ConversionObjectType.Object:
+                    var innerConversionObjects = ConverterSettings.GetTypeDefinition(obj.GetType());
+                    
+                    foreach (var innerConversionObject in innerConversionObjects)
+                    {
+                        values.Add(ToCsv(innerConversionObject.GetValue(obj)));
+                    }
+                    break;
+                default:
+                    values.Add(obj.ToString());
+                    break;
+            }
+
+            return String.Join(delimiter, values);
         }
     }
 }
