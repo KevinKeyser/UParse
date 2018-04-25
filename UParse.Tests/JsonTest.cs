@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SimpleJSON;
 
 namespace UParse.Tests
 {
@@ -26,6 +27,8 @@ namespace UParse.Tests
             var converter = new JsonConverter();
             var json = converter.Serialize(data);
             Log(json);
+            JSONClass jsonclass = JSON.Parse(json).AsObject;
+            Log(jsonclass);
             data = converter.Deserialize(json, data.GetType()) as TestData;
             json = converter.Serialize(data);
             Log(json);
