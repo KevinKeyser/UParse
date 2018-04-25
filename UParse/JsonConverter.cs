@@ -42,68 +42,45 @@ namespace UParse
 
         private string ToJson(object obj)
         {
-            var stringBuilder = new StringBuilder();
-            var ConversionObjectType = ConversionObjectTypeExtensions.GetConversionObjectType(obj.GetType());
-            switch (ConversionObjectType)
+            var values = new List<string>();
+            var conversionObjectType = obj.GetType().GetConversionObjectType();
+            switch (conversionObjectType)
             {
                 case ConversionObjectType.Array:
-                    stringBuilder.Append("[");
                     var array = (IEnumerable) obj;
                     
-                    var firstArray = true;
                     foreach (var item in array)
                     {
-                        if (!firstArray)
-                        {
-                            stringBuilder.Append(",");
-                        }
-
-                        stringBuilder.Append(ToJson(item));
-                        firstArray = false;
+                        values.Add($"{ToJson(item)}");
                     }
-
-                    stringBuilder.Append("]");
+                    values = new List<string>()
+                    {
+                        $"[{String.Join(",", values)}]"
+                    };
                     break;
                 case ConversionObjectType.Object:
-                    stringBuilder.Append("{");
-                    var properties = obj.GetType().GetProperties();
-                    var first = true;
-                    foreach (var propertyInfo in properties)
+                    var innerConversionObjects = ConverterSettings.GetTypeDefinition(obj.GetType());
+                    foreach (var innerConversionObject in innerConversionObjects)
                     {
-                        if (propertyInfo.SetMethod == null ||
-                            propertyInfo.GetMethod == null)
-                        {
-                            continue;
-                        }
-
-                        if (!first)
-                        {
-                            stringBuilder.Append(",");
-                        }
-
-                        stringBuilder.Append($"{propertyInfo.Name}:");
-                        if (propertyInfo.GetIndexParameters().Length > 0)
-                        {
-                            stringBuilder.Append(ToJson(propertyInfo.IndexerToEnumerable(obj)));
-                            continue;
-                        }
-
-
-                        stringBuilder.Append(ToJson(propertyInfo.GetValue(obj)));
-                        first = false;
+                        values.Add($"\"{innerConversionObject.Name}\":{ToJson(innerConversionObject.GetValue(obj))}");
                     }
-
-                    stringBuilder.Append("}");
+                    values = new List<string>()
+                    {
+                        $"{{{String.Join(",", values)}}}"
+                    };
                     break;
                 case ConversionObjectType.String:
-                    stringBuilder.Append($"\"{obj}\"");
+                    values.Add($"\"{obj}\"");
+                    break;
+                case ConversionObjectType.Boolean:
+                    values.Add(obj.ToString().ToLower());
                     break;
                 default:
-                    stringBuilder.Append(obj);
+                    values.Add(obj.ToString());
                     break;
             }
 
-            return stringBuilder.ToString();
+            return String.Join(",", values);
         }
 
         private object GetValue(JSONNode node, Type type)
