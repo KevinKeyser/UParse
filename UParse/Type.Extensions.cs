@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 namespace UParse
@@ -29,14 +30,14 @@ namespace UParse
 
             return null;
         }
-        
+
         public static bool IsAssignableToGenericType(this Type type, Type genericType)
         {
             var interfaceTypes = type.GetInterfaces();
 
             if (type.IsGenericType && type.GetGenericTypeDefinition() == genericType)
                 return true;
-            
+
             foreach (var it in interfaceTypes)
             {
                 if (it.IsGenericType && it.GetGenericTypeDefinition() == genericType)
@@ -48,7 +49,7 @@ namespace UParse
 
             return IsAssignableToGenericType(baseType, genericType);
         }
-        
+
         public static bool IsNumber(this Type type)
         {
             return type == typeof(sbyte)
@@ -63,8 +64,6 @@ namespace UParse
                    || type == typeof(double)
                    || type == typeof(decimal);
         }
-        
-    #region https://stackoverflow.com/questions/14107683/how-to-find-the-smallest-assignable-type-in-two-types-duplicate
 
         /// <summary>
         ///     Finds a common base class or implemented interface
@@ -163,7 +162,5 @@ namespace UParse
             }
             while (typeInHierarchy != null && !typeInHierarchy.IsInterface);
         }
-
-    #endregion
     }
 }

@@ -43,10 +43,10 @@ namespace UParse
         private string ToJson(object obj)
         {
             var stringBuilder = new StringBuilder();
-            var jsonType = GetJsonType(obj.GetType());
-            switch (jsonType)
+            var ConversionObjectType = ConversionObjectTypeExtensions.GetConversionObjectType(obj.GetType());
+            switch (ConversionObjectType)
             {
-                case JsonType.Array:
+                case ConversionObjectType.Array:
                     stringBuilder.Append("[");
                     var array = (IEnumerable) obj;
                     
@@ -64,7 +64,7 @@ namespace UParse
 
                     stringBuilder.Append("]");
                     break;
-                case JsonType.Object:
+                case ConversionObjectType.Object:
                     stringBuilder.Append("{");
                     var properties = obj.GetType().GetProperties();
                     var first = true;
@@ -95,7 +95,7 @@ namespace UParse
 
                     stringBuilder.Append("}");
                     break;
-                case JsonType.String:
+                case ConversionObjectType.String:
                     stringBuilder.Append($"\"{obj}\"");
                     break;
                 default:
@@ -146,7 +146,7 @@ namespace UParse
             }
             else
             {
-                list = Activator.CreateInstance(arrayType) as IList;
+                list = (IList)Activator.CreateInstance(arrayType);
             }
 
             for (var i = 0; i < jsonArray.Count; i++)
@@ -241,44 +241,34 @@ namespace UParse
             return node.Value;
         }
 
-        private JsonType GetJsonType(Type type)
+        private ConversionObjectType GetConversionObjectType(Type type)
         {
             if (type == typeof(string) || type == typeof(char))
             {
-                return JsonType.String;
+                return ConversionObjectType.String;
             }
 
             if (typeof(IEnumerable).IsAssignableFrom(type))
             {
-                return JsonType.Array;
+                return ConversionObjectType.Array;
             }
 
             if (type.IsNumber())
             {
-                return JsonType.Number;
+                return ConversionObjectType.Number;
             }
 
             if (type == typeof(bool))
             {
-                return JsonType.Boolean;
+                return ConversionObjectType.Boolean;
             }
 
             if (!type.IsPrimitive)
             {
-                return JsonType.Object;
+                return ConversionObjectType.Object;
             }
 
-            return JsonType.Null;
-        }
-
-        private enum JsonType
-        {
-            Null = 0,
-            Array = 1,
-            Object = 2,
-            String = 3,
-            Number = 4,
-            Boolean = 5
+            return ConversionObjectType.Null;
         }
         #endregion
     }
